@@ -5,13 +5,20 @@ VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dev", "Dev", "{9750F10F-A707-4709-942E-AB567F99A345}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Velentr.FiniteStateMachine", "Velentr.FiniteStateMachine\Velentr.FiniteStateMachine.csproj", "{7C8F4C3F-E257-4E04-9F14-2D6BE5DA8A3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Velentr.FiniteStateMachine", "Velentr.FiniteStateMachine\Velentr.FiniteStateMachine.csproj", "{7C8F4C3F-E257-4E04-9F14-2D6BE5DA8A3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Velentr.FiniteStateMachine.DevEnv", "Velentr.FiniteStateMachine.DevEnv\Velentr.FiniteStateMachine.DevEnv.csproj", "{3142FC48-C80D-4242-BB2B-F7137DB90F89}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Velentr.FiniteStateMachine.DevEnv", "Velentr.FiniteStateMachine.DevEnv\Velentr.FiniteStateMachine.DevEnv.csproj", "{3142FC48-C80D-4242-BB2B-F7137DB90F89}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{D02AEE8F-1306-4EC6-AB53-E77BED6AD696}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Velentr.FiniteStateMachine.Test", "Velentr.FiniteStateMachine.Test\Velentr.FiniteStateMachine.Test.csproj", "{3B2A4FAC-0667-46DA-9BCA-C2230AE0CD09}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Velentr.FiniteStateMachine.Test", "Velentr.FiniteStateMachine.Test\Velentr.FiniteStateMachine.Test.csproj", "{3B2A4FAC-0667-46DA-9BCA-C2230AE0CD09}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{7B051353-BDEC-49D4-8FBE-FB0D0B439824}"
+	ProjectSection(SolutionItems) = preProject
+		CODEOWNERS = CODEOWNERS
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

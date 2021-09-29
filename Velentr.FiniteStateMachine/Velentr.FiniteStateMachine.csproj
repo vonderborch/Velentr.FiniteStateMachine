@@ -7,12 +7,12 @@
     <Company>Christian Webber</Company>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl></RepositoryUrl>
-    <PackageTags></PackageTags>
-    <Description></Description>
+    <PackageTags>FSM, State Machine, Finite State Machine</PackageTags>
+    <Description>A library containing a simple Finite State Machine implementation.</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\..\release</OutputPath>
+    <OutputPath>..\release</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

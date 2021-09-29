@@ -17,11 +17,13 @@ namespace Velentr.FiniteStateMachine.DevEnv
 
             fsm.FinalizeStateMachine();
 
-            //fsm.Trigger(DoorTriggers.Close);
-
+            Console.WriteLine(fsm.CurrentStateValue.ToString()); // The FSM is Closed!
             fsm.Trigger(DoorTriggers.Open);
 
-            Console.WriteLine(fsm.CurrentStateValue.ToString());
+            Console.WriteLine(fsm.CurrentStateValue.ToString()); // The FSM is Opened!
+            fsm.Trigger(DoorTriggers.Close);
+
+            Console.WriteLine(fsm.CurrentStateValue.ToString()); // The FSM is Closed!
         }
     }
 }

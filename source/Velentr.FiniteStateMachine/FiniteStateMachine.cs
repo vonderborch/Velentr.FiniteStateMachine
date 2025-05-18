@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Velentr.FiniteStateMachine;
@@ -7,49 +9,72 @@ namespace Velentr.FiniteStateMachine;
 ///     Represents a finite state machine that manages states and transitions between them.
 /// </summary>
 /// <typeparam name="TState">The type representing the states in the finite state machine.</typeparam>
-[DebuggerDisplay("")]
-public class FiniteStateMachine<TState> where TState : notnull
+/// <typeparam name="TTrigger">The type representing the triggers that cause transitions.</typeparam>
+/// <typeparam name="TBlackboard">The type representing the shared data associated with the finite state machine.</typeparam>
+[DebuggerDisplay("Current State: {CurrentStateValue} (Valid: {ValidateFiniteStateMachine()})")]
+public class FiniteStateMachine<TState, TTrigger, TBlackboard>
+    where TState : notnull
+    where TTrigger : IEquatable<TTrigger>
+    where TBlackboard : class
 {
-    private TState currentState;
-
-    private readonly Dictionary<TState, IState<TState>?> states;
+    [JsonIgnore] private readonly Dictionary<TState, State<TState, TTrigger, TBlackboard>?> states;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="FiniteStateMachine{TState}" /> class.
+    ///     Initializes a new instance of the <see cref="FiniteStateMachine{TState, TTrigger, TBlackboard}" /> class.
     /// </summary>
     /// <param name="startingState">The initial state of the finite state machine.</param>
-    /// <param name="currentState">The current state of the finite state machine.</param>
-    [JsonConstructor]
-    public FiniteStateMachine(TState startingState, TState? currentState = default)
+    public FiniteStateMachine(TState startingState)
     {
         this.StartingStateValue = startingState;
-        this.currentState = currentState ?? startingState;
-        this.states = new Dictionary<TState, IState<TState>?>();
+        this.CurrentStateValue = startingState;
+        this.states = new Dictionary<TState, State<TState, TTrigger, TBlackboard>?>();
     }
 
     /// <summary>
-    ///     Gets the value of the starting state of the finite state machine.
+    ///     Initializes a new instance of the <see cref="FiniteStateMachine{TState, TTrigger, TBlackboard}" /> class.
     /// </summary>
-    [JsonPropertyName("startingState")]
-    public TState StartingStateValue { get; }
-    
-    /// <summary>
-    ///     Gets the value of the current state of the finite state machine.
-    /// </summary>
-    [JsonPropertyName("currentState")]
-    public TState CurrentStateValue => this.currentState;
-    
+    /// <param name="startingStateValue">The initial state of the finite state machine.</param>
+    /// <param name="currentStateValue">The current state of the finite state machine.</param>
+    /// <param name="states">The states of the finite state machine.</param>
+    [JsonConstructor]
+    public FiniteStateMachine(TState startingStateValue, TState currentStateValue,
+        Dictionary<TState, State<TState, TTrigger, TBlackboard>?> states)
+    {
+        this.StartingStateValue = startingStateValue;
+        this.CurrentStateValue = currentStateValue;
+        this.states = states;
+    }
+
     /// <summary>
     ///     Gets the current state of the finite state machine.
     /// </summary>
     [JsonIgnore]
-    public IState<TState> CurrentState => this.states[this.currentState]!;
-    
+    public State<TState, TTrigger, TBlackboard> CurrentState => this.states[this.CurrentStateValue]!;
+
     /// <summary>
     ///     Gets the starting state of the finite state machine.
     /// </summary>
     [JsonIgnore]
-    public IState<TState> StartingState => this.states[this.StartingStateValue]!;
+    public State<TState, TTrigger, TBlackboard> StartingState => this.states[this.StartingStateValue]!;
+
+    /// <summary>
+    ///     Gets the value of the starting state of the finite state machine.
+    /// </summary>
+    [JsonPropertyName("startingStateValue")]
+    public TState StartingStateValue { get; }
+
+    /// <summary>
+    ///     Gets the collection of states in the finite state machine, mapped by their state values.
+    /// </summary>
+    [JsonPropertyName("states")]
+    public Dictionary<TState, State<TState, TTrigger, TBlackboard>?> States => new(this.states);
+
+    /// <summary>
+    ///     Gets the value of the current state of the finite state machine.
+    /// </summary>
+    [JsonPropertyName("currentStateValue")]
+    [field: JsonIgnore]
+    public TState CurrentStateValue { get; private set; }
 
     /// <summary>
     ///     Adds a state with a custom state object to the finite state machine.
@@ -57,7 +82,8 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="state">The state to add.</param>
     /// <param name="stateObject">The custom state object.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> AddIState(TState state, IState<TState> stateObject)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> AddState(TState state,
+        State<TState, TTrigger, TBlackboard> stateObject)
     {
         this.states.TryAdd(state, stateObject);
         return this;
@@ -68,9 +94,9 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// </summary>
     /// <param name="state">The state to add.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> AddState(TState state)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> AddState(TState state)
     {
-        return AddIState(state, new State<TState>(state));
+        return AddState(state, new State<TState, TTrigger, TBlackboard>(state));
     }
 
     /// <summary>
@@ -80,7 +106,7 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="to">The state to transition to.</param>
     /// <param name="trigger">The trigger that causes the transition.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> AddTransition(TState from, TState to, object trigger)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> AddTransition(TState from, TState to, TTrigger trigger)
     {
         if (this.states.ContainsKey(from) && this.states.ContainsKey(to))
         {
@@ -97,7 +123,8 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="to">The state to transition to.</param>
     /// <param name="triggerLambda">The condition that causes the transition.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> AddTransition(TState from, TState to, Func<object?, bool> triggerLambda)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> AddTransition(TState from, TState to,
+        Expression<Func<TBlackboard, bool>> triggerLambda)
     {
         if (this.states.ContainsKey(from) && this.states.ContainsKey(to))
         {
@@ -118,16 +145,28 @@ public class FiniteStateMachine<TState> where TState : notnull
     }
 
     /// <summary>
+    ///     Deserializes an FSM from a serialized string representation.
+    /// </summary>
+    /// <param name="serializedState">The serialized string representation of the FSM.</param>
+    /// <param name="options">Optional JSON serializer options for customization.</param>
+    /// <returns>The current FSM instance after deserialization.</returns>
+    public static FiniteStateMachine<TState, TTrigger, TBlackboard>? Deserialize(string serializedState,
+        JsonSerializerOptions? options = null)
+    {
+        options ??= Constants.SerializationOptions;
+        FiniteStateMachine<TState, TTrigger, TBlackboard>? fsm =
+            JsonSerializer.Deserialize<FiniteStateMachine<TState, TTrigger, TBlackboard>>(serializedState, options);
+        return fsm;
+    }
+
+    /// <summary>
     ///     Removes a state from the finite state machine.
     /// </summary>
     /// <param name="state">The state to remove.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> RemoveState(TState state)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> RemoveState(TState state)
     {
-        if (this.states.ContainsKey(state))
-        {
-            this.states.Remove(state);
-        }
+        this.states.Remove(state);
 
         return this;
     }
@@ -138,11 +177,11 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="from">The state to transition from.</param>
     /// <param name="trigger">The trigger associated with the transition.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> RemoveTransition(TState from, object trigger)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> RemoveTransition(TState from, TTrigger trigger)
     {
-        if (this.states.ContainsKey(from))
+        if (this.states.TryGetValue(from, out State<TState, TTrigger, TBlackboard>? state))
         {
-            this.states[from]?.RemoveTransition(trigger);
+            state?.RemoveTransition(trigger);
         }
 
         return this;
@@ -154,11 +193,12 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="from">The state to transition from.</param>
     /// <param name="triggerLambda">The condition associated with the transition.</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> RemoveTransition(TState from, Func<object?, bool> triggerLambda)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> RemoveTransition(TState from,
+        Expression<Func<TBlackboard, bool>> triggerLambda)
     {
-        if (this.states.ContainsKey(from))
+        if (this.states.TryGetValue(from, out State<TState, TTrigger, TBlackboard>? state))
         {
-            this.states[from]?.RemoveTransition(triggerLambda);
+            state?.RemoveTransition(triggerLambda);
         }
 
         return this;
@@ -167,49 +207,60 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <summary>
     ///     Resets the finite state machine to its starting state.
     /// </summary>
-    /// <param name="blackboard">Optional shared data associated with the reset.</param>
+    /// <param name="blackboard">Shared data associated with the reset.</param>
     /// <returns>True if the reset was successful; otherwise, false.</returns>
-    public bool Reset(object? blackboard = null)
+    public bool Reset(TBlackboard? blackboard = null)
     {
-        var transitionResult = Transition(this.currentState, this.StartingStateValue, null, blackboard, true);
+        var transitionResult = Transition(this.CurrentStateValue, this.StartingStateValue, default, blackboard, true);
         return transitionResult;
     }
 
     /// <summary>
-    ///     Sets the current state of the finite state machine.
+    ///     Serializes the current FSM into a string representation.
     /// </summary>
-    /// <param name="state">The state to set as the current state.</param>
-    /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> SetState(TState state)
+    /// <param name="options">Optional JSON serializer options for customization.</param>
+    /// <returns>A string containing the serialized FSM data.</returns>
+    public string Serialize(JsonSerializerOptions? options = null)
     {
-        if (this.states.ContainsKey(state))
-        {
-            this.currentState = state;
-        }
-
-        return this;
+        options ??= Constants.SerializationOptions;
+        var json = JsonSerializer.Serialize(this, options);
+        return json;
     }
 
-    private bool Transition(TState from, TState to, object trigger, object? blackboard = null, bool isReset = false)
+    /// <summary>
+    ///     Serializes the finite state machine instance into a JSON string.
+    /// </summary>
+    /// <param name="fsm">The finite state machine to serialize.</param>
+    /// <param name="options">Optional serializer options for customizing the serialization process.</param>
+    /// <returns>A JSON string representation of the finite state machine.</returns>
+    public static string Serialize(FiniteStateMachine<TState, TTrigger, TBlackboard> fsm,
+        JsonSerializerOptions? options = null)
     {
-        if (this.states.ContainsKey(from) && this.states.ContainsKey(to) && !Equals(this.currentState, to))
+        return fsm.Serialize(options);
+    }
+
+    private bool Transition(TState from, TState to, TTrigger? trigger, TBlackboard? blackboard, bool isReset = false)
+    {
+        if (this.states.ContainsKey(from) && this.states.ContainsKey(to) && !Equals(this.CurrentStateValue, to))
         {
-            IState<TState>? current = this.states[from];
-            IState<TState>? next = this.states[to];
+            State<TState, TTrigger, TBlackboard>? current = this.states[from];
+            State<TState, TTrigger, TBlackboard>? next = this.states[to];
 
             if (current!.Events != null)
             {
                 current.Events.OnExit.Trigger(this,
-                    new FiniteStateMachineEventArgs<TState>(from, to, trigger, blackboard, isReset));
+                    new FiniteStateMachineEventArgs<TState, TTrigger, TBlackboard>(from, to, trigger, blackboard,
+                        isReset));
             }
 
             if (next!.Events != null)
             {
                 next.Events.OnEnter.Trigger(this,
-                    new FiniteStateMachineEventArgs<TState>(from, to, trigger, blackboard, isReset));
+                    new FiniteStateMachineEventArgs<TState, TTrigger, TBlackboard>(from, to, trigger, blackboard,
+                        isReset));
             }
 
-            this.currentState = to;
+            this.CurrentStateValue = to;
             return true;
         }
 
@@ -220,13 +271,13 @@ public class FiniteStateMachine<TState> where TState : notnull
     ///     Triggers a transition based on a specific event.
     /// </summary>
     /// <param name="trigger">The trigger that causes the transition.</param>
-    /// <param name="blackboard">Optional shared data associated with the transition.</param>
+    /// <param name="blackboard">Shared data associated with the transition.</param>
     /// <returns>True if the transition was successful; otherwise, false.</returns>
-    public bool Trigger(object trigger, object? blackboard = null)
+    public bool Trigger(TTrigger trigger, TBlackboard? blackboard = null)
     {
-        if (this.states[this.currentState]!.ShouldTransitionFromTrigger(trigger, out TState? nextState))
+        if (this.states[this.CurrentStateValue]!.ShouldTransitionFromTrigger(trigger, out TState nextState))
         {
-            var transitionResult = Transition(this.currentState, nextState!, trigger, blackboard);
+            var transitionResult = Transition(this.CurrentStateValue, nextState, trigger, blackboard);
             return transitionResult;
         }
 
@@ -238,17 +289,17 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// </summary>
     /// <param name="trigger">The trigger that causes the transition.</param>
     /// <param name="transitioned">Outputs True if a transition occurred, False otherwise.</param>
-    /// <param name="blackboard">Optional shared data associated with the transition.</param>
+    /// <param name="blackboard">Shared data associated with the transition.</param>
     /// <returns>The current state of the Finite State Machine.</returns>
-    public TState Trigger(object trigger, out bool transitioned, object? blackboard = null)
+    public TState Trigger(TTrigger trigger, out bool transitioned, TBlackboard? blackboard = null)
     {
         transitioned = false;
-        if (this.states[this.currentState]!.ShouldTransitionFromTrigger(trigger, out TState? nextState))
+        if (this.states[this.CurrentStateValue]!.ShouldTransitionFromTrigger(trigger, out TState nextState))
         {
-            transitioned = Transition(this.currentState, nextState!, trigger, blackboard);
+            transitioned = Transition(this.CurrentStateValue, nextState, trigger, blackboard);
         }
 
-        return this.currentState;
+        return this.CurrentStateValue;
     }
 
     /// <summary>
@@ -257,15 +308,16 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <param name="trigger">The trigger that causes the transition.</param>
     /// <param name="startingState">The state of the State Machine going into this method.</param>
     /// <param name="nextState">The state of the State Machine coming out of this method.</param>
-    /// <param name="blackboard">Optional shared data associated with the transition.</param>
+    /// <param name="blackboard">Shared data associated with the transition.</param>
     /// <returns>True if the transition was successful; otherwise, false.</returns>
-    public bool Trigger(object trigger, out TState startingState, out TState? nextState, object? blackboard = null)
+    public bool Trigger(TTrigger trigger, out TState startingState, out TState? nextState,
+        TBlackboard? blackboard = null)
     {
         var transitioned = false;
-        startingState = this.currentState;
-        if (this.states[this.currentState]!.ShouldTransitionFromTrigger(trigger, out nextState))
+        startingState = this.CurrentStateValue;
+        if (this.states[this.CurrentStateValue]!.ShouldTransitionFromTrigger(trigger, out nextState))
         {
-            transitioned = Transition(this.currentState, nextState!, trigger, blackboard);
+            transitioned = Transition(this.CurrentStateValue, nextState, trigger, blackboard);
         }
 
         nextState = transitioned ? nextState : default;
@@ -275,15 +327,20 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <summary>
     ///     Updates the finite state machine based on the current blackboard data.
     /// </summary>
-    /// <param name="blackboard">Optional shared data associated with the update.</param>
+    /// <param name="blackboard">Shared data associated with the update.</param>
     /// <returns>True if a transition occurred; otherwise, false.</returns>
-    public bool Update(object? blackboard = null)
+    public bool Update(TBlackboard blackboard)
     {
-        if (this.states[this.currentState]!.ShouldTransitionFromUpdate(blackboard, out TState? nextState))
+        if (this.states[this.CurrentStateValue]!.ShouldTransitionFromUpdate(blackboard, out TState? nextState))
         {
-            var transitioned = Transition(this.currentState, nextState!, null, blackboard);
+            var transitioned = Transition(this.CurrentStateValue, nextState, default, blackboard);
             return transitioned;
         }
+
+        this.states[this.CurrentStateValue]!.Events?.OnUpdate.Trigger(this,
+            new FiniteStateMachineEventArgs<TState, TTrigger, TBlackboard>(this.CurrentStateValue,
+                this.CurrentStateValue,
+                default, blackboard));
 
         return false;
     }
@@ -293,29 +350,65 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// </summary>
     /// <param name="startingState">The state of the State Machine going into this method.</param>
     /// <param name="nextState">The state of the State Machine coming out of this method.</param>
-    /// <param name="blackboard">Optional shared data associated with the update.</param>
+    /// <param name="blackboard">Shared data associated with the update.</param>
     /// <returns>True if a transition occurred; otherwise, false.</returns>
-    public bool Update(out TState startingState, out TState? nextState, object? blackboard = null)
+    public bool Update(out TState startingState, TBlackboard blackboard, out TState? nextState)
     {
-        startingState = this.currentState;
+        startingState = this.CurrentStateValue;
         var transitioned = Update(blackboard);
-        nextState = transitioned ? this.currentState : default;
+        nextState = transitioned ? this.CurrentStateValue : default;
         return transitioned;
     }
 
     /// <summary>
     ///     Updates the finite state machine based on the current blackboard data.
     /// </summary>
+    /// <param name="blackboard">Shared data associated with the update.</param>
     /// <param name="startingState">The state of the State Machine going into this method.</param>
     /// <param name="nextState">The state of the State Machine coming out of this method.</param>
     /// <param name="transitioned">Outputs True if a transition occurred, False otherwise.</param>
-    /// <param name="blackboard">Optional shared data associated with the update.</param>
-    public void Update(out TState startingState, out TState? nextState, out bool transitioned,
-        object? blackboard = null)
+    public void Update(TBlackboard blackboard, out TState startingState, out TState? nextState, out bool transitioned)
     {
-        startingState = this.currentState;
+        startingState = this.CurrentStateValue;
         transitioned = Update(blackboard);
-        nextState = transitioned ? this.currentState : default;
+        nextState = transitioned ? this.CurrentStateValue : default;
+    }
+
+    /// <summary>
+    ///     Updates a transition from the specified source state to the specified target state using the provided trigger.
+    /// </summary>
+    /// <param name="from">The source state from which the transition originates.</param>
+    /// <param name="trigger">The trigger object used to initiate the transition.</param>
+    /// <param name="newTo">The target state to which the transition is directed.</param>
+    /// <returns>The current instance of the finite state machine after updating the transition.</returns>
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> UpdateTransition(TState from, TTrigger trigger,
+        TState newTo)
+    {
+        if (this.states.ContainsKey(from) && this.states.ContainsKey(newTo))
+        {
+            this.states[from]?.UpdateTransition(trigger, newTo);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    ///     Updates a transition from the specified state to a new state using the provided trigger expression.
+    /// </summary>
+    /// <param name="from">The source state of the transition.</param>
+    /// <param name="triggerLambda">An expression representing the trigger logic.</param>
+    /// <param name="newTo">The target state to which the transition should be updated.</param>
+    /// <returns>The modified finite state machine instance.</returns>
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> UpdateTransition(TState from,
+        Expression<Func<TBlackboard, bool>> triggerLambda,
+        TState newTo)
+    {
+        if (this.states.ContainsKey(from) && this.states.ContainsKey(newTo))
+        {
+            this.states[from]?.UpdateTransition(triggerLambda, newTo);
+        }
+
+        return this;
     }
 
     /// <summary>
@@ -339,11 +432,40 @@ public class FiniteStateMachine<TState> where TState : notnull
     /// <summary>
     ///     Validates whether all possible states are present in the finite state machine and provides the result.
     /// </summary>
-    /// <param name="hasMissingStates">Outputs whether any states are missing.</param>
+    /// <param name="hasAllStates">Outputs whether all states are present (True) or not (False).</param>
     /// <returns>The current finite state machine instance.</returns>
-    public FiniteStateMachine<TState> ValidateContainsAllStates(out bool hasMissingStates)
+    public FiniteStateMachine<TState, TTrigger, TBlackboard> ValidateContainsAllStates(out bool hasAllStates)
     {
-        hasMissingStates = ValidateContainsAllStates();
+        hasAllStates = ValidateContainsAllStates();
         return this;
+    }
+
+    /// <summary>
+    ///     Validates the finite state machine to ensure all states are present and their transitions are valid.
+    /// </summary>
+    /// <returns>
+    ///     True if the finite state machine is valid; otherwise, false.
+    /// </returns>
+    public bool ValidateFiniteStateMachine()
+    {
+        if (!ValidateContainsAllStates())
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<TState, State<TState, TTrigger, TBlackboard>?> state in this.states)
+        {
+            if (state.Value == null)
+            {
+                return false;
+            }
+
+            if (!state.Value.ValidateTransitions())
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

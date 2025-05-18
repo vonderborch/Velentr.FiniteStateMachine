@@ -11,8 +11,8 @@
         <AssemblyName>Velentr.FiniteStateMachine.Test</AssemblyName>
         <RootNamespace>Velentr.FiniteStateMachine.Test</RootNamespace>
         <ApplicationIcon>..\..\..\logo.ico</ApplicationIcon>
-        <AssemblyVersion>3.0.0.0</AssemblyVersion>
-        <FileVersion>3.0.0.0</FileVersion>
+        <AssemblyVersion>3.0.0.16</AssemblyVersion>
+        <FileVersion>3.0.0.16</FileVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

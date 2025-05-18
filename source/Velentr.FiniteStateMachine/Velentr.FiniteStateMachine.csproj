@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Version>3.0.0.16</Version>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>Velentr.FiniteStateMachine</Title>
+        <Authors>Christian Webber</Authors>
+        <Description>A simple library containing code for a Finite State Machine definition</Description>
+        <Copyright>(c) 2025</Copyright>
+        <PackageProjectUrl>https://github.com/vonderborch/Velentr.FiniteStateMachine</PackageProjectUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>logo.png</PackageIcon>
+        <RepositoryUrl>https://github.com/vonderborch/Velentr.FiniteStateMachine</RepositoryUrl>
+        <PackageTags>Velentr, Finite State Machine, FSM, Finite-State-Machine</PackageTags>
+        <AssemblyVersion>3.0.0.16</AssemblyVersion>
+        <FileVersion>3.0.0.16</FileVersion>
+        <Company>Christian Webber</Company>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <OutputPath>..\..\debug\core</OutputPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <OutputPath>..\..\release\core</OutputPath>
+        <DocumentationFile>..\..\release\core\Velentr.FiniteStateMachine.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\..\logo.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+            <Link>logo.png</Link>
+        </None>
+        <None Include="..\..\README.md">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+            <Link>README.md</Link>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Serialize.Linq" Version="4.0.167"/>
+        <PackageReference Include="Velentr.Collections" Version="3.0.1.3"/>
+        <PackageReference Include="Velentr.Core" Version="3.1.1.5"/>
+    </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="Powershell Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(SolutionDir)release\$(ProjectName).zip' -Force" Condition="'$(ConfigurationName)' == 'Release' and '$(OS)' == 'Windows_NT'"/>
+        <Exec Command="pwsh -Command Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(SolutionDir)release\$(ProjectName).zip' -Force" Condition="'$(ConfigurationName)' == 'Release' and '$(OS)' != 'Windows_NT'"/>
+    </Target>
+</Project>

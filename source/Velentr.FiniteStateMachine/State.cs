@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Velentr.Core.Json;
 
 namespace Velentr.FiniteStateMachine;
 
@@ -75,7 +76,7 @@ public class State<TState, TTrigger, TBlackboard> where TState : notnull
             try
             {
                 Expression<Func<TBlackboard, bool>> deserializedTrigger =
-                    TransitionSerializor<TBlackboard>.DeserializeExpression(transition.Key);
+                    ExpressionSerializer<Func<TBlackboard, bool>>.DeserializeExpression(transition.Key);
                 this.functionalTransitions.Add(deserializedTrigger, transition.Value);
                 this.compiledFunctionalTransitions.Add(deserializedTrigger, deserializedTrigger.Compile());
             }
@@ -115,7 +116,7 @@ public class State<TState, TTrigger, TBlackboard> where TState : notnull
                 foreach (KeyValuePair<Expression<Func<TBlackboard, bool>>, TState> transition in this
                              .functionalTransitions)
                 {
-                    var serializedTrigger = TransitionSerializor<TBlackboard>.SerializeExpression(transition.Key);
+                    var serializedTrigger = ExpressionSerializer<Func<TBlackboard, bool>>.SerializeExpression(transition.Key);
                     this.serializedFunctionalTransitions.Add(serializedTrigger, transition.Value);
                 }
             }
@@ -132,7 +133,7 @@ public class State<TState, TTrigger, TBlackboard> where TState : notnull
                 try
                 {
                     Expression<Func<TBlackboard, bool>> deserializedTrigger =
-                        TransitionSerializor<TBlackboard>.DeserializeExpression(transition.Key);
+                        ExpressionSerializer<Func<TBlackboard, bool>>.DeserializeExpression(transition.Key);
                     this.functionalTransitions.Add(deserializedTrigger, transition.Value);
                     this.compiledFunctionalTransitions.Add(deserializedTrigger, deserializedTrigger.Compile());
                 }
@@ -187,7 +188,7 @@ public class State<TState, TTrigger, TBlackboard> where TState : notnull
         {
             this.compiledFunctionalTransitions.Add(triggerLambda, triggerLambda.Compile());
             this.serializedFunctionalTransitions.Add(
-                TransitionSerializor<TBlackboard>.SerializeExpression(triggerLambda), nextState);
+                ExpressionSerializer<Func<TBlackboard, bool>>.SerializeExpression(triggerLambda), nextState);
         }
 
         return this;

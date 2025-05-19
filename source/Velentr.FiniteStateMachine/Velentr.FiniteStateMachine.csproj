@@ -3,7 +3,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>3.0.0.16</Version>
+        <Version>3.1.0.2</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Title>Velentr.FiniteStateMachine</Title>
         <Authors>Christian Webber</Authors>
@@ -15,8 +15,8 @@
         <PackageIcon>logo.png</PackageIcon>
         <RepositoryUrl>https://github.com/vonderborch/Velentr.FiniteStateMachine</RepositoryUrl>
         <PackageTags>Velentr, Finite State Machine, FSM, Finite-State-Machine</PackageTags>
-        <AssemblyVersion>3.0.0.16</AssemblyVersion>
-        <FileVersion>3.0.0.16</FileVersion>
+        <AssemblyVersion>3.1.0.2</AssemblyVersion>
+        <FileVersion>3.1.0.2</FileVersion>
         <Company>Christian Webber</Company>
     </PropertyGroup>
 
@@ -44,8 +44,8 @@
 
     <ItemGroup>
         <PackageReference Include="Serialize.Linq" Version="4.0.167"/>
-        <PackageReference Include="Velentr.Collections" Version="3.0.1.3"/>
-        <PackageReference Include="Velentr.Core" Version="3.1.1.5"/>
+        <PackageReference Include="Velentr.Collections" Version="3.1.0.7" />
+        <PackageReference Include="Velentr.Core" Version="3.2.0" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
